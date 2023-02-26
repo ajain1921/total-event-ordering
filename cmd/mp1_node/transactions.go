@@ -7,10 +7,10 @@ import (
 )
 
 type Transaction struct {
-	deposit       bool
-	amount        int
-	sourceAccount string
-	destAccount   string
+	Deposit       bool
+	Amount        int
+	SourceAccount string
+	DestAccount   string
 }
 
 func StreamTransactions(file *os.File, transactions chan Transaction) error {
@@ -22,7 +22,7 @@ func StreamTransactions(file *os.File, transactions chan Transaction) error {
 			return err
 		}
 
-		fmt.Print("GEN: ", line)
+		// fmt.Print("GEN: ", line)
 		var transactionType string
 		var sourceAccount string
 		var destAccount string
@@ -39,10 +39,12 @@ func StreamTransactions(file *os.File, transactions chan Transaction) error {
 			}
 		}
 
-		transactions <- Transaction{
-			deposit:       transactionType == "DEPOSIT",
-			amount:        amount,
-			sourceAccount: sourceAccount,
-			destAccount:   destAccount}
+		transaction := Transaction{
+			Deposit:       transactionType == "DEPOSIT",
+			Amount:        amount,
+			SourceAccount: sourceAccount,
+			DestAccount:   destAccount}
+
+		transactions <- transaction
 	}
 }

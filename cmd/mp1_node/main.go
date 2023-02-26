@@ -51,7 +51,7 @@ func run() error {
 
 func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan Message) {
 	for {
-		<-transactions
-		messages <- Message{node: node.identifier, content: "gobby gob"}
+		transaction := <-transactions
+		messages <- Message{Node: node.identifier, Transaction: transaction}
 	}
 }

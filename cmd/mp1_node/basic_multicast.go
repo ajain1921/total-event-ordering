@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"encoding/gob"
 	"fmt"
 	"net"
 	"time"
@@ -19,8 +19,9 @@ type ConnectionStatus struct {
 }
 
 type Message struct {
-	node    string
-	content string
+	Node        string
+	Content     string
+	Transaction Transaction
 }
 
 type BasicMulticast struct {
@@ -71,17 +72,6 @@ func (multicast *BasicMulticast) ready() bool {
 	return true
 }
 
-func (multicast *BasicMulticast) sendMessage(conn net.Conn, message Message) {
-	// TODO: Impl
-	fmt.Fprintln(conn, message.node+" "+message.content)
-}
-
-func (multicast *BasicMulticast) parseMessage(line string) Message {
-	var identifier string
-	fmt.Sscanf(line, "%s connected", &identifier)
-	return Message{node: identifier, content: "connected"}
-}
-
 func (multicast *BasicMulticast) connect(node *MPNode) {
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
@@ -90,8 +80,15 @@ func (multicast *BasicMulticast) connect(node *MPNode) {
 	}
 	defer conn.Close()
 
-	connectionMessage := Message{node: multicast.currentNode.identifier, content: "connected"}
-	multicast.sendMessage(conn, connectionMessage)
+	encoder := gob.NewEncoder(conn)
+
+	connectionMessage := Message{Node: multicast.currentNode.identifier, Content: "connected"}
+	err = encoder.Encode(connectionMessage)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("SEND ", connectionMessage)
 
 	multicast.connections[node.identifier].outbound = true
 
@@ -106,8 +103,9 @@ func (multicast *BasicMulticast) connect(node *MPNode) {
 
 	for {
 		message := <-multicast.writer
-		_, err = fmt.Fprintln(conn, message)
+		err = encoder.Encode(&message)
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
 		fmt.Println("SEND ", message)
@@ -117,22 +115,19 @@ func (multicast *BasicMulticast) connect(node *MPNode) {
 func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 	fmt.Println("connection hander...")
 
-	reader := bufio.NewReader(conn)
+	dec := gob.NewDecoder(conn)
 
-	line, err := reader.ReadString('\n')
+	message := &Message{}
+	err := dec.Decode(message)
 	if err != nil {
-		fmt.Println("err", err)
+		fmt.Println(err)
 		return
 	}
-
-	fmt.Println("Line received", line)
-
-	message := multicast.parseMessage(line)
-
+	fmt.Println("RECV ", *message)
 	var node *MPNode
 
 	for _, otherNode := range multicast.otherNodes {
-		if otherNode.identifier == message.node {
+		if otherNode.identifier == message.Node {
 			node = otherNode
 			break
 		}
@@ -146,13 +141,13 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 	}
 
 	for {
-		line, err := reader.ReadString('\n')
+		message := &Message{}
+		err = dec.Decode(message)
 		if err != nil {
-			break
+			fmt.Println(err)
+			return
 		}
 
-		// message := multicast.parseMessage(line)
-
-		fmt.Print("RECV ", line)
+		fmt.Println("RECV ", *message)
 	}
 }
