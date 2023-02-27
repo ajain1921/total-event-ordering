@@ -82,7 +82,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 			proposal := ISISMessage{
 				Node:        multicast.currentNode.identifier,
 				ToNode:      &isis.Node,
-				Transaction: Transaction{},
+				Transaction: isis.Transaction,
 				proposal:    true,
 				agreed:      false,
 				priority:    multicast.highestPriority,
@@ -102,7 +102,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 				// fmt.Println("Sending agree")
 				agreed := ISISMessage{
 					Node:          multicast.currentNode.identifier,
-					Transaction:   Transaction{},
+					Transaction:   isis.Transaction,
 					priority:      multicast.priorities[isis.Identifier],
 					agreed:        true,
 					proposal:      false,
