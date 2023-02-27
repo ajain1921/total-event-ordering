@@ -39,7 +39,7 @@ func (multicast *BasicMulticast) Setup() error {
 	multicast.connections = make(map[string]*ConnectionStatus)
 	multicast.channels = make(map[string]chan BasicMessage)
 
-	ln, err := net.Listen("tcp", ":"+multicast.currentNode.port)
+	ln, err := net.Listen("tcp", multicast.currentNode.hostname+":"+multicast.currentNode.port)
 	if err != nil {
 		return err
 	}
