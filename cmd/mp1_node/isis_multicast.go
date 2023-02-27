@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"strings"
 )
 
 type ISISPriority struct {
-	num        int
-	identifier string
+	Num        int
+	Identifier string
 }
 
 type ISISMessage struct {
@@ -26,9 +27,10 @@ type ISISMessage struct {
 }
 
 type Content struct {
-	proposal bool
-	agreed   bool
-	priority ISISPriority
+	Proposal   bool
+	Agreed     bool
+	Priority   ISISPriority
+	Identifier string
 }
 
 type ISISMulticast struct {
@@ -75,7 +77,8 @@ func (multicast *ISISMulticast) addISISReceives() {
 		isis := reliableToISIS(message)
 
 		if !isis.proposal && !isis.agreed {
-			multicast.highestPriority.num++
+			multicast.highestPriority.Num++
+			// fmt.Println("sending proposal")
 			proposal := ISISMessage{
 				Node:        multicast.currentNode.identifier,
 				ToNode:      &isis.Node,
@@ -94,7 +97,9 @@ func (multicast *ISISMulticast) addISISReceives() {
 				multicast.priorities[isis.Identifier] = isis.priority
 			}
 			multicast.proposedCounts[isis.Identifier]++
+			// fmt.Println("recieved proposal cnt: ", multicast.proposedCounts[isis.Identifier])
 			if multicast.proposedCounts[isis.Identifier] >= len(multicast.otherNodes)+1 {
+				// fmt.Println("Sending agree")
 				agreed := ISISMessage{
 					Node:          multicast.currentNode.identifier,
 					Transaction:   Transaction{},
@@ -127,22 +132,31 @@ func (multicast *ISISMulticast) addISISReceives() {
 // if agreed == false and proposal == true, parse proposal,
 
 func reliableToISIS(message ReliableMessage) ISISMessage {
-
 	decoder := gob.NewDecoder(strings.NewReader(message.Content))
 
 	content := &Content{}
 	err := decoder.Decode(content)
+	// fmt.Println("recieved cotentn: ", message.Content)
 	if err != nil {
-		panic("AHHHHHHHHH")
+		return ISISMessage{
+			proposal:    false,
+			agreed:      false,
+			Node:        message.Node,
+			Identifier:  message.Identifier,
+			Transaction: message.Transaction,
+			ToNode:      message.ToNode,
+		}
 	}
 
+	// fmt.Println("actual isis messaged received")
+
 	return ISISMessage{
-		proposal:      content.proposal,
-		agreed:        content.agreed,
-		priority:      content.priority,
+		proposal:      content.Proposal,
+		agreed:        content.Agreed,
+		priority:      content.Priority,
 		undeliverable: false, //unimportant
 		Node:          message.Node,
-		Identifier:    message.Identifier,
+		Identifier:    content.Identifier,
 		Transaction:   message.Transaction,
 		ToNode:        message.ToNode,
 	}
@@ -153,32 +167,37 @@ func ISISToReliable(message ISISMessage) ReliableMessage {
 
 	// Content format: <agreed>:<proposal>
 
-	builder := strings.Builder{}
-	encoder := gob.NewEncoder(&builder)
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
 
-	err := encoder.Encode(message)
+	contentStruct := Content{
+		Proposal:   message.proposal,
+		Agreed:     message.agreed,
+		Priority:   message.priority,
+		Identifier: message.Identifier,
+	}
+	err := encoder.Encode(contentStruct)
 	if err != nil {
 		panic("AHHHHAAAAA")
 	}
 
-	content := builder.String()
+	content := buffer.String()
 
 	return ReliableMessage{
 		Node:        message.Node,
 		Content:     content,
 		Transaction: message.Transaction,
-		Identifier:  message.Identifier,
+		Identifier:  "",
 		ToNode:      message.ToNode,
 	}
-
 }
 
 // True if a > b
 func ComparePriorities(a, b ISISPriority) bool {
-	first := a.num - b.num
+	first := a.Num - b.Num
 	if first != 0 {
 		return first > 0
 	}
 
-	return strings.Compare(a.identifier, b.identifier) > 0
+	return strings.Compare(a.Identifier, b.Identifier) > 0
 }

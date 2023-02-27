@@ -46,10 +46,7 @@ func (pq *PriorityQueue) Peek() any {
 }
 
 // update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) update(item *ISISMessage, priority struct {
-	num        int
-	identifier string
-}) {
+func (pq *PriorityQueue) update(item *ISISMessage, priority ISISPriority) {
 	item.priority = priority
 
 	heap.Fix(pq, item.index)

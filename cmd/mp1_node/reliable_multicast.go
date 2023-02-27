@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 type ReliableMessage struct {
 	Node        string
@@ -20,6 +23,8 @@ type ReliableMulticast struct {
 	basicReceiver  chan BasicMessage
 	received       map[string]interface{}
 }
+
+var counter = 0
 
 func (multicast *ReliableMulticast) Setup() error {
 	multicast.received = make(map[string]interface{})
@@ -64,10 +69,11 @@ func (multicast *ReliableMulticast) addReliableWrites() {
 	for {
 		message := <-multicast.writer
 
+		message.Identifier = multicast.currentNode.identifier + "," + strconv.Itoa(counter)
+		counter++
+
 		basic := reliableToBasic(message)
-
 		multicast.basicWriter <- basic
-
 		// Send to self!
 		multicast.basicReceiver <- basic
 	}
@@ -75,6 +81,8 @@ func (multicast *ReliableMulticast) addReliableWrites() {
 
 func basicToReliable(basic BasicMessage) ReliableMessage {
 	split := strings.SplitN(basic.Content, ":", 2)
+
+	// fmt.Println("received large content: ", split[1], " BREAK ", basic.Content)
 
 	return ReliableMessage{
 		Node:        basic.Node,
@@ -87,6 +95,8 @@ func basicToReliable(basic BasicMessage) ReliableMessage {
 
 func reliableToBasic(reliable ReliableMessage) BasicMessage {
 	content := reliable.Identifier + ":" + reliable.Content
+
+	// fmt.Println("Sending legit: " + reliable.Content)
 
 	return BasicMessage{
 		Node:        reliable.Node,
