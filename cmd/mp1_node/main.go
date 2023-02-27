@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 )
 
 func main() {
@@ -33,25 +35,70 @@ func run() error {
 	genTransactions := make(chan Transaction)
 	go StreamTransactions(os.Stdin, genTransactions)
 
-	genMessages := make(chan Message)
+	genMessages := make(chan ReliableMessage)
 	go transactionsToMessages(currentNode, genTransactions, genMessages)
 
-	multicast := &BasicMulticast{currentNode: currentNode, otherNodes: otherNodes, writer: genMessages}
+	multicast := &ReliableMulticast{currentNode: currentNode, otherNodes: otherNodes, writer: genMessages}
 	err = multicast.Setup()
 	if err != nil {
 		return err
 	}
 
+	balances := make(map[string]int)
+
 	for {
 		message := <-multicast.Receiver()
-		// TODO: Apply transaction
-		fmt.Println(message)
+		// fmt.Println("DELIVERED: ", message.Identifier)
+
+		transaction := message.Transaction
+
+		if _, contains := balances[transaction.DestAccount]; !contains {
+			balances[transaction.DestAccount] = 0
+		}
+
+		if transaction.Deposit {
+			balances[transaction.DestAccount] += transaction.Amount
+		} else {
+			if _, contains := balances[transaction.SourceAccount]; contains {
+				if balances[transaction.SourceAccount] >= transaction.Amount {
+					balances[transaction.SourceAccount] -= transaction.Amount
+					balances[transaction.DestAccount] += transaction.Amount
+				}
+			}
+		}
+
+		accounts := make([]string, len(balances))
+
+		i := 0
+		for k := range balances {
+			accounts[i] = k
+			i++
+		}
+
+		sort.Strings(accounts)
+		fmt.Print("BALANCES ")
+		for i, account := range accounts {
+			if balances[account] <= 0 {
+				continue
+			}
+
+			fmt.Print(account + ":" + strconv.Itoa(balances[account]))
+			if i != len(balances)-1 {
+				fmt.Print(" ")
+			}
+		}
+		fmt.Println()
 	}
 }
 
-func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan Message) {
+var counter = 0
+
+func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan ReliableMessage) {
 	for {
 		transaction := <-transactions
-		messages <- Message{Node: node.identifier, Transaction: transaction}
+		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: node.identifier + "," + strconv.Itoa(counter)}
+		// fmt.Println("SENDING: ", message.Identifier)
+		messages <- message
+		counter++
 	}
 }

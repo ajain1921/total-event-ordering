@@ -18,22 +18,23 @@ type ConnectionStatus struct {
 	inbound  bool
 }
 
-type Message struct {
+type BasicMessage struct {
 	Node        string
 	Content     string
 	Transaction Transaction
+	ToNode      *string
 }
 
 type BasicMulticast struct {
 	currentNode *MPNode
 	otherNodes  []*MPNode
 	connections map[string]*ConnectionStatus
-	writer      chan Message
-	receiver    chan string
+	writer      chan BasicMessage
+	receiver    chan BasicMessage
 }
 
 func (multicast *BasicMulticast) Setup() error {
-	multicast.receiver = make(chan string)
+	multicast.receiver = make(chan BasicMessage)
 	multicast.connections = make(map[string]*ConnectionStatus)
 
 	ln, err := net.Listen("tcp", ":"+multicast.currentNode.port)
@@ -58,7 +59,7 @@ func (multicast *BasicMulticast) Setup() error {
 	return nil
 }
 
-func (multicast *BasicMulticast) Receiver() <-chan string {
+func (multicast *BasicMulticast) Receiver() <-chan BasicMessage {
 	return multicast.receiver
 }
 
@@ -75,55 +76,59 @@ func (multicast *BasicMulticast) ready() bool {
 func (multicast *BasicMulticast) connect(node *MPNode) {
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
-		fmt.Println("trying to connect to " + node.identifier + " but failed")
+		// fmt.Println("trying to connect to " + node.identifier + " but failed")
 		return
 	}
 	defer conn.Close()
 
 	encoder := gob.NewEncoder(conn)
 
-	connectionMessage := Message{Node: multicast.currentNode.identifier, Content: "connected"}
+	connectionMessage := BasicMessage{Node: multicast.currentNode.identifier, Content: "connected"}
 	err = encoder.Encode(connectionMessage)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("SEND ", connectionMessage)
+	// fmt.Println("SEND ", connectionMessage)
 
 	multicast.connections[node.identifier].outbound = true
 
-	fmt.Println("Connection message sent, waiting for ready")
+	// fmt.Println("Connection message sent, waiting for ready")
 
 	for !multicast.ready() {
 	}
 
-	fmt.Println("Ready, sleeping")
+	// fmt.Println("Ready, sleeping")
 
 	time.Sleep(time.Duration(5) * time.Second)
 
 	for {
 		message := <-multicast.writer
+		// If we're unicasting and this isn't the destination... STOP
+		if message.ToNode != nil && *message.ToNode != node.identifier {
+			continue
+		}
 		err = encoder.Encode(&message)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println("SEND ", message)
+		// fmt.Println("SEND ", message)
 	}
 }
 
 func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
-	fmt.Println("connection hander...")
+	// fmt.Println("connection hander...")
 
 	dec := gob.NewDecoder(conn)
 
-	message := &Message{}
+	message := &BasicMessage{}
 	err := dec.Decode(message)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("RECV ", *message)
+	// fmt.Println("RECV ", *message)
 	var node *MPNode
 
 	for _, otherNode := range multicast.otherNodes {
@@ -141,13 +146,15 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 	}
 
 	for {
-		message := &Message{}
+		message := &BasicMessage{}
 		err = dec.Decode(message)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		fmt.Println("RECV ", *message)
+		multicast.receiver <- *message
+
+		// fmt.Println("RECV ", *message)
 	}
 }
