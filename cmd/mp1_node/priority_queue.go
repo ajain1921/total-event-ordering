@@ -42,6 +42,9 @@ func (pq *PriorityQueue) Pop() any {
 }
 
 func (pq *PriorityQueue) Peek() any {
+	if len(*pq) == 0 {
+		return nil
+	}
 	return (*pq)[len(*pq)-1]
 }
 

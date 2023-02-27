@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -60,6 +61,7 @@ func (multicast *ReliableMulticast) addReliableReceives() {
 			if message.Node != multicast.currentNode.identifier {
 				multicast.basicWriter <- message
 			}
+			fmt.Println("RELIABLE DELIVERING: " + reliable.Identifier)
 			multicast.receiver <- reliable
 		}
 	}
@@ -71,6 +73,10 @@ func (multicast *ReliableMulticast) addReliableWrites() {
 
 		message.Identifier = multicast.currentNode.identifier + "," + strconv.Itoa(counter)
 		counter++
+
+		if _, contains := multicast.received[message.Identifier]; !contains {
+			fmt.Println("SENDING (FIRST): " + message.Identifier)
+		}
 
 		basic := reliableToBasic(message)
 		multicast.basicWriter <- basic

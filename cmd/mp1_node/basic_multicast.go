@@ -105,6 +105,7 @@ func (multicast *BasicMulticast) connect(node *MPNode) {
 	for {
 		message := <-multicast.writer
 		// If we're unicasting and this isn't the destination... STOP
+		fmt.Println("B-multicast: " + message.Content)
 		if message.ToNode != nil && *message.ToNode != node.identifier {
 			continue
 		}

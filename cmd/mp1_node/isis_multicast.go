@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -74,11 +76,10 @@ func (multicast *ISISMulticast) addISISReceives() {
 	for {
 		message := <-multicast.reliableReceiver
 
-		isis := reliableToISIS(message)
-
+		isis := ReliableToISIS(message)
+		fmt.Println("RELIABLE DELIVERED: " + isis.Identifier)
 		if !isis.proposal && !isis.agreed {
 			multicast.highestPriority.Num++
-			// fmt.Println("sending proposal")
 			proposal := ISISMessage{
 				Node:        multicast.currentNode.identifier,
 				ToNode:      &isis.Node,
@@ -88,7 +89,9 @@ func (multicast *ISISMulticast) addISISReceives() {
 				priority:    multicast.highestPriority,
 				Identifier:  isis.Identifier,
 			}
+			fmt.Println("SENDING PROPOSAL: " + isis.Identifier)
 			multicast.writer <- ISISToReliable(proposal)
+			fmt.Println("WRITER PULLED")
 			multicast.queue.Push(&isis)
 		} else if isis.proposal {
 			if _, contains := multicast.priorities[isis.Identifier]; !contains {
@@ -97,9 +100,10 @@ func (multicast *ISISMulticast) addISISReceives() {
 				multicast.priorities[isis.Identifier] = isis.priority
 			}
 			multicast.proposedCounts[isis.Identifier]++
+			fmt.Println("RECEIVED PROPOSAL: " + isis.Identifier + " (" + strconv.Itoa(multicast.proposedCounts[isis.Identifier]) + ")")
 			// fmt.Println("recieved proposal cnt: ", multicast.proposedCounts[isis.Identifier])
 			if multicast.proposedCounts[isis.Identifier] >= len(multicast.otherNodes)+1 {
-				// fmt.Println("Sending agree")
+				fmt.Println("SENDING AGREE: " + isis.Identifier + " [" + strconv.Itoa(multicast.priorities[isis.Identifier].Num) + "," + multicast.priorities[isis.Identifier].Identifier + "]")
 				agreed := ISISMessage{
 					Node:          multicast.currentNode.identifier,
 					Transaction:   isis.Transaction,
@@ -118,7 +122,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 			multicast.queue.update(&isis, isis.priority)
 			isis.undeliverable = false
 			// deliver all deliverable at front of queue
-			for !multicast.queue.Peek().(*ISISMessage).undeliverable {
+			for multicast.queue.Peek() != nil && !multicast.queue.Peek().(*ISISMessage).undeliverable {
 				message := multicast.queue.Pop().(*ISISMessage)
 				multicast.receiver <- *message
 			}
@@ -131,7 +135,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 // if agreed == true and proposal == false, parse agreed priority, store in priority queue as deliverable?
 // if agreed == false and proposal == true, parse proposal,
 
-func reliableToISIS(message ReliableMessage) ISISMessage {
+func ReliableToISIS(message ReliableMessage) ISISMessage {
 	decoder := gob.NewDecoder(strings.NewReader(message.Content))
 
 	content := &Content{}
@@ -187,7 +191,7 @@ func ISISToReliable(message ISISMessage) ReliableMessage {
 		Node:        message.Node,
 		Content:     content,
 		Transaction: message.Transaction,
-		Identifier:  "",
+		Identifier:  message.Identifier,
 		ToNode:      message.ToNode,
 	}
 }
