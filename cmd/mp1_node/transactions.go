@@ -22,7 +22,7 @@ func StreamTransactions(file *os.File, transactions chan Transaction) error {
 			return err
 		}
 
-		// fmt.Print("GEN: ", line)
+		fmt.Print("GEN: ", line)
 		var transactionType string
 		var sourceAccount string
 		var destAccount string
@@ -45,6 +45,7 @@ func StreamTransactions(file *os.File, transactions chan Transaction) error {
 			SourceAccount: sourceAccount,
 			DestAccount:   destAccount}
 
+		fmt.Println("GEN: ", transaction)
 		transactions <- transaction
 	}
 }

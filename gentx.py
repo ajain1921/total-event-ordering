@@ -15,8 +15,11 @@ DEP_PROB = 0.1
 # recommend leaving this at 0 until you want to test illegal transaction detection
 ILLEGAL_TRANSFER_PROB = 0.0
 
-def random_account(): 
+
+def random_account():
     return ''.join(random.choice(ascii_lowercase) for _ in range(ACCOUNT_LEN))
+
+
 # 0 balance by default
 balances = defaultdict(int)
 
@@ -25,11 +28,14 @@ if len(sys.argv) > 1:
 else:
     rate = 1.0
 
-while True:
+i = 0
+# while True:
+while i < 1:
     if random.random() < DEP_PROB:
         account = random_account()
-        amount = random.randrange(1,101)
+        amount = random.randrange(1, 101)
         print(f"DEPOSIT {account} {amount}")
+        i += 1
         balances[account] += amount
     else:
         illegal = random.random() < ILLEGAL_TRANSFER_PROB
@@ -37,7 +43,8 @@ while True:
         if balances[account] == 0 and not illegal:
             continue
         if illegal:
-            amount = random.randrange(balances[account]+1, balances[account]+101)
+            amount = random.randrange(
+                balances[account]+1, balances[account]+101)
         else:
             amount = random.randrange(1, balances[account]+1)
 
@@ -48,7 +55,8 @@ while True:
                 break
 
         print(f"TRANSFER {account} -> {dest} {amount}")
-        if not illegal: # update local balances
+        i += 1
+        if not illegal:  # update local balances
             balances[account] -= amount
             balances[dest] += amount
     sleep(random.expovariate(rate))

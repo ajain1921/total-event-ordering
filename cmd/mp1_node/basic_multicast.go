@@ -28,6 +28,7 @@ type BasicMessage struct {
 type BasicMulticast struct {
 	currentNode *MPNode
 	otherNodes  []*MPNode
+	allNodes    []*MPNode
 	connections map[string]*ConnectionStatus
 	writer      chan BasicMessage
 	receiver    chan BasicMessage
@@ -44,7 +45,15 @@ func (multicast *BasicMulticast) Setup() error {
 		return err
 	}
 
-	for _, node := range multicast.otherNodes {
+	var allNodes []*MPNode
+	allNodes = append(allNodes, multicast.otherNodes...)
+	allNodes = append(allNodes, multicast.currentNode)
+
+	multicast.allNodes = allNodes
+
+	// allNodes = append(allNodes, multicast.currentNode...)
+
+	for _, node := range allNodes {
 		multicast.channels[node.identifier] = make(chan BasicMessage)
 		multicast.connections[node.identifier] = &ConnectionStatus{}
 		go multicast.connect(node, multicast.channels[node.identifier])
@@ -52,7 +61,7 @@ func (multicast *BasicMulticast) Setup() error {
 
 	go multicast.forward()
 
-	for range multicast.otherNodes {
+	for range allNodes {
 		conn, err := ln.Accept()
 		if err != nil {
 			return err
@@ -69,7 +78,7 @@ func (multicast *BasicMulticast) Receiver() <-chan BasicMessage {
 }
 
 func (multicast *BasicMulticast) ready() bool {
-	for _, node := range multicast.otherNodes {
+	for _, node := range multicast.allNodes {
 		connectionStatus := multicast.connections[node.identifier]
 		if !connectionStatus.inbound || !connectionStatus.outbound {
 			return false
@@ -90,7 +99,7 @@ func (multicast *BasicMulticast) forward() {
 func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage) {
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
-		// fmt.Println("trying to connect to " + node.identifier + " but failed")
+		fmt.Println("trying to connect to " + node.identifier + " but failed")
 		return
 	}
 	defer conn.Close()
@@ -103,16 +112,16 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 		fmt.Println(err)
 		return
 	}
-	// fmt.Println("SEND ", connectionMessage)
+	fmt.Println("SEND ", connectionMessage)
 
 	multicast.connections[node.identifier].outbound = true
 
-	// fmt.Println("Connection message sent, waiting for ready")
+	fmt.Println("Connection message sent, waiting for ready")
 
 	for !multicast.ready() {
 	}
 
-	// fmt.Println("Ready, sleeping")
+	fmt.Println("Ready, sleeping")
 
 	time.Sleep(time.Duration(5) * time.Second)
 
@@ -132,7 +141,7 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 }
 
 func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
-	// fmt.Println("connection hander...")
+	fmt.Println("connection hander...")
 
 	dec := gob.NewDecoder(conn)
 
@@ -142,10 +151,10 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 		fmt.Println(err)
 		return
 	}
-	// fmt.Println("RECV ", *message)
+	fmt.Println("RECV ", *message)
 	var node *MPNode
 
-	for _, otherNode := range multicast.otherNodes {
+	for _, otherNode := range multicast.allNodes {
 		if otherNode.identifier == message.Node {
 			node = otherNode
 			break

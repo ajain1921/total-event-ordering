@@ -81,6 +81,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 		isis := ReliableToISIS(message)
 
 		if !isis.proposal && !isis.agreed {
+			fmt.Println("not a proposal and not agreed (multicasted message)", isis)
 			multicast.highestPriority.Num++
 			proposal := ISISMessage{
 				Node: multicast.currentNode.identifier,
@@ -92,9 +93,9 @@ func (multicast *ISISMulticast) addISISReceives() {
 				Identifier:  isis.Identifier,
 			}
 
-			fmt.Println("I-multicast.writer <- proposal", proposal.agreed)
-
+			fmt.Println("before send proposal to multicasted writer", proposal)
 			multicast.writer <- ISISToReliable(proposal)
+			fmt.Println("after send proposal to multicasted writer", proposal)
 			multicast.queue.Push(&isis)
 		} else if isis.proposal {
 			if _, contains := multicast.priorities[isis.Identifier]; !contains {

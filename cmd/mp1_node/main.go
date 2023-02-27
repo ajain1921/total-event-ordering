@@ -97,9 +97,10 @@ func run() error {
 func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan ReliableMessage) {
 	for {
 		transaction := <-transactions
+		fmt.Println("picked up transaction", transaction)
 		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: ""}
 		// fmt.Println("ISIS SENDING ", node.Identifier)
-		fmt.Println("I-multicast.writer <- message")
+		fmt.Println("converted to message", message)
 		messages <- message
 	}
 }
