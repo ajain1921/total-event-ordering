@@ -31,11 +31,13 @@ type BasicMulticast struct {
 	connections map[string]*ConnectionStatus
 	writer      chan BasicMessage
 	receiver    chan BasicMessage
+	channels    map[string]chan BasicMessage
 }
 
 func (multicast *BasicMulticast) Setup() error {
 	multicast.receiver = make(chan BasicMessage)
 	multicast.connections = make(map[string]*ConnectionStatus)
+	multicast.channels = make(map[string]chan BasicMessage)
 
 	ln, err := net.Listen("tcp", ":"+multicast.currentNode.port)
 	if err != nil {
@@ -43,9 +45,12 @@ func (multicast *BasicMulticast) Setup() error {
 	}
 
 	for _, node := range multicast.otherNodes {
+		multicast.channels[node.identifier] = make(chan BasicMessage)
 		multicast.connections[node.identifier] = &ConnectionStatus{}
-		go multicast.connect(node)
+		go multicast.connect(node, multicast.channels[node.identifier])
 	}
+
+	go multicast.forward()
 
 	for range multicast.otherNodes {
 		conn, err := ln.Accept()
@@ -73,7 +78,16 @@ func (multicast *BasicMulticast) ready() bool {
 	return true
 }
 
-func (multicast *BasicMulticast) connect(node *MPNode) {
+func (multicast *BasicMulticast) forward() {
+	for {
+		message := <-multicast.writer
+		for _, channel := range multicast.channels {
+			channel <- message
+		}
+	}
+}
+
+func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage) {
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
 		// fmt.Println("trying to connect to " + node.identifier + " but failed")
@@ -103,9 +117,8 @@ func (multicast *BasicMulticast) connect(node *MPNode) {
 	time.Sleep(time.Duration(5) * time.Second)
 
 	for {
-		message := <-multicast.writer
+		message := <-channel
 		// If we're unicasting and this isn't the destination... STOP
-		fmt.Println("B-multicast: " + message.Content)
 		if message.ToNode != nil && *message.ToNode != node.identifier {
 			continue
 		}
@@ -143,7 +156,7 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 	connection.inbound = true
 
 	if !connection.outbound {
-		go multicast.connect(node)
+		go multicast.connect(node, multicast.channels[node.identifier])
 	}
 
 	for {

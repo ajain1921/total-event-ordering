@@ -74,24 +74,27 @@ func (multicast *ISISMulticast) Receiver() <-chan ISISMessage {
 func (multicast *ISISMulticast) addISISReceives() {
 
 	for {
+		fmt.Println("<-I-multicast.reliableReceiver")
+
 		message := <-multicast.reliableReceiver
 
 		isis := ReliableToISIS(message)
-		fmt.Println("RELIABLE DELIVERED: " + isis.Identifier)
+
 		if !isis.proposal && !isis.agreed {
 			multicast.highestPriority.Num++
 			proposal := ISISMessage{
-				Node:        multicast.currentNode.identifier,
-				ToNode:      &isis.Node,
+				Node: multicast.currentNode.identifier,
+				// ToNode:      &isis.Node,
 				Transaction: isis.Transaction,
 				proposal:    true,
 				agreed:      false,
 				priority:    multicast.highestPriority,
 				Identifier:  isis.Identifier,
 			}
-			fmt.Println("SENDING PROPOSAL: " + isis.Identifier)
+
+			fmt.Println("I-multicast.writer <- proposal", proposal.agreed)
+
 			multicast.writer <- ISISToReliable(proposal)
-			fmt.Println("WRITER PULLED")
 			multicast.queue.Push(&isis)
 		} else if isis.proposal {
 			if _, contains := multicast.priorities[isis.Identifier]; !contains {
@@ -116,6 +119,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 				multicast.writer <- ISISToReliable(agreed)
 			}
 		} else if isis.agreed {
+			fmt.Println("aggred")
 			if ComparePriorities(isis.priority, multicast.highestPriority) {
 				multicast.highestPriority = isis.priority
 			}

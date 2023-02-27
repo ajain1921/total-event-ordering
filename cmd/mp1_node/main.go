@@ -99,6 +99,7 @@ func transactionsToMessages(node *MPNode, transactions chan Transaction, message
 		transaction := <-transactions
 		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: ""}
 		// fmt.Println("ISIS SENDING ", node.Identifier)
+		fmt.Println("I-multicast.writer <- message")
 		messages <- message
 	}
 }

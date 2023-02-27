@@ -52,6 +52,7 @@ func (multicast *ReliableMulticast) Receiver() <-chan ReliableMessage {
 
 func (multicast *ReliableMulticast) addReliableReceives() {
 	for {
+		fmt.Println("<-R-multicast.basicReceiver")
 		message := <-multicast.basicReceiver
 
 		reliable := basicToReliable(message)
@@ -59,9 +60,10 @@ func (multicast *ReliableMulticast) addReliableReceives() {
 		if _, contains := multicast.received[reliable.Identifier]; !contains {
 			multicast.received[reliable.Identifier] = true
 			if message.Node != multicast.currentNode.identifier {
+				fmt.Println("R-multicast.basicWriter <- message")
 				multicast.basicWriter <- message
 			}
-			fmt.Println("RELIABLE DELIVERING: " + reliable.Identifier)
+			fmt.Println("R-multicast.receiver <- reliable")
 			multicast.receiver <- reliable
 		}
 	}
@@ -69,19 +71,19 @@ func (multicast *ReliableMulticast) addReliableReceives() {
 
 func (multicast *ReliableMulticast) addReliableWrites() {
 	for {
+		fmt.Println("<-R-multicast.Writer")
 		message := <-multicast.writer
 
 		message.Identifier = multicast.currentNode.identifier + "," + strconv.Itoa(counter)
 		counter++
 
-		if _, contains := multicast.received[message.Identifier]; !contains {
-			fmt.Println("SENDING (FIRST): " + message.Identifier)
-		}
-
 		basic := reliableToBasic(message)
-		multicast.basicWriter <- basic
+
 		// Send to self!
+		fmt.Println("R-multicast.basicReceiver <- basic")
 		multicast.basicReceiver <- basic
+		fmt.Println("R-multicast.basicWriter <- basic")
+		multicast.basicWriter <- basic
 	}
 }
 
