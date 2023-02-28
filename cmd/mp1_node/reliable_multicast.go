@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -60,7 +61,14 @@ func (multicast *ReliableMulticast) addReliableReceives() {
 		if _, contains := multicast.received[reliable.Identifier]; !contains {
 			multicast.received[reliable.Identifier] = true
 			if message.Node != multicast.currentNode.identifier {
-				// fmt.Println("sender node is not current node so multicast message", message.Transaction)
+				fmt.Println("sender node is not current node so multicast message", message.Transaction)
+				destinations := make(map[string]interface{})
+
+				for _, node := range multicast.otherNodes {
+					destinations[node.identifier] = struct{}{}
+				}
+
+				message.Destinations = destinations
 				multicast.basicWriter <- message
 			}
 			// fmt.Println("send reliable message to reliable receiver", reliable.Identifier, reliable.Transaction)
@@ -99,7 +107,7 @@ func basicToReliable(basic BasicMessage) ReliableMessage {
 		Content:     split[1],
 		Identifier:  split[0],
 		Transaction: basic.Transaction,
-		ToNode:      basic.ToNode,
+		ToNode:      nil,
 	}
 }
 
@@ -108,10 +116,16 @@ func reliableToBasic(reliable ReliableMessage) BasicMessage {
 
 	// fmt.Println("Sending legit: " + reliable.Content)
 
+	destinations := make(map[string]interface{})
+
+	if reliable.ToNode != nil {
+		destinations[*reliable.ToNode] = struct{}{}
+	}
+
 	return BasicMessage{
-		Node:        reliable.Node,
-		Content:     content,
-		Transaction: reliable.Transaction,
-		ToNode:      reliable.ToNode,
+		Node:         reliable.Node,
+		Content:      content,
+		Transaction:  reliable.Transaction,
+		Destinations: destinations,
 	}
 }

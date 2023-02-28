@@ -19,10 +19,10 @@ type ConnectionStatus struct {
 }
 
 type BasicMessage struct {
-	Node        string
-	Content     string
-	Transaction Transaction
-	ToNode      *string
+	Node         string
+	Content      string
+	Transaction  Transaction
+	Destinations map[string]interface{}
 }
 
 type BasicMulticast struct {
@@ -50,8 +50,6 @@ func (multicast *BasicMulticast) Setup() error {
 	allNodes = append(allNodes, multicast.currentNode)
 
 	multicast.allNodes = allNodes
-
-	// allNodes = append(allNodes, multicast.currentNode...)
 
 	for _, node := range allNodes {
 		multicast.channels[node.identifier] = make(chan BasicMessage)
@@ -127,8 +125,9 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 
 	for {
 		message := <-channel
-		// If we're unicasting and this isn't the destination... STOP
-		if message.ToNode != nil && *message.ToNode != node.identifier {
+		// Make sure this node is in the message's group
+		_, contains := message.Destinations[node.identifier]
+		if len(message.Destinations) != 0 && !contains {
 			continue
 		}
 		err = encoder.Encode(&message)
