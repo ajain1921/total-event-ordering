@@ -18,7 +18,7 @@ func (pq PriorityQueue) Less(i, j int) bool {
 	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
 	priorityI := pq[i]
 	priorityJ := pq[j]
-	return ComparePriorities(priorityI.priority, priorityJ.priority)
+	return !ComparePriorities(priorityI.priority, priorityJ.priority)
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
