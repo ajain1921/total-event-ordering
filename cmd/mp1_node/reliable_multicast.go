@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -53,21 +52,21 @@ func (multicast *ReliableMulticast) Receiver() <-chan ReliableMessage {
 func (multicast *ReliableMulticast) addReliableReceives() {
 	for {
 		message := <-multicast.basicReceiver
-		fmt.Println("picked up message from basic receiver", message.Transaction)
+		// fmt.Println("picked up message from basic receiver", message.Transaction)
 
 		reliable := basicToReliable(message)
-		fmt.Println("convert to reliable", reliable.Identifier, reliable.Transaction)
+		// fmt.Println("convert to reliable", reliable.Identifier, reliable.Transaction)
 
 		if _, contains := multicast.received[reliable.Identifier]; !contains {
 			multicast.received[reliable.Identifier] = true
 			if message.Node != multicast.currentNode.identifier {
-				fmt.Println("sender node is not current node so multicast message", message.Transaction)
+				// fmt.Println("sender node is not current node so multicast message", message.Transaction)
 				multicast.basicWriter <- message
 			}
-			fmt.Println("send reliable message to reliable receiver", reliable.Identifier, reliable.Transaction)
+			// fmt.Println("send reliable message to reliable receiver", reliable.Identifier, reliable.Transaction)
 			multicast.receiver <- reliable
 		} else {
-			fmt.Println("second time receiving message", reliable.Identifier, reliable.Transaction)
+			// fmt.Println("second time receiving message", reliable.Identifier, reliable.Transaction)
 		}
 	}
 }
@@ -75,14 +74,14 @@ func (multicast *ReliableMulticast) addReliableReceives() {
 func (multicast *ReliableMulticast) addReliableWrites() {
 	for {
 		message := <-multicast.writer
-		fmt.Println("picked up message from reliable writer", message.Identifier, message.Transaction)
+		// fmt.Println("picked up message from reliable writer", message.Identifier, message.Transaction)
 
 		message.Identifier = multicast.currentNode.identifier + "," + strconv.Itoa(counter)
 		counter++
-		fmt.Println("repackage with new identifier", message.Identifier, message.Transaction)
+		// fmt.Println("repackage with new identifier", message.Identifier, message.Transaction)
 
 		basic := reliableToBasic(message)
-		fmt.Println("convert to basic message", basic.Transaction)
+		// fmt.Println("convert to basic message", basic.Transaction)
 
 		// Send to self!
 		// multicast.basicReceiver <- basic

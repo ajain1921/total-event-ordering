@@ -3,6 +3,9 @@ package main
 
 import (
 	"container/heap"
+	"strconv"
+
+	"golang.org/x/exp/slices"
 )
 
 // A PriorityQueue implements heap.Interface and holds Items.
@@ -48,9 +51,29 @@ func (pq *PriorityQueue) Peek() any {
 	return (*pq)[len(*pq)-1]
 }
 
-// update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) update(item *ISISMessage, priority ISISPriority) {
-	item.priority = priority
+func (pq *PriorityQueue) Print() string {
+	contents := "["
+	for _, item := range *pq {
+		contents += "(" + strconv.FormatBool(item.undeliverable) + ") " + item.Transaction.Identifier + ": " + strconv.Itoa(item.priority.Num) + "." + item.priority.Identifier
+		contents += "  "
+	}
+	contents += "]"
+	return contents
+}
 
-	heap.Fix(pq, item.index)
+// update modifies the priority and value of an Item in the queue.
+func (pq *PriorityQueue) update(isis *ISISMessage, priority ISISPriority) {
+	// item.priority = priority
+
+	//get item index from queue using identifier
+	itemIdx := slices.IndexFunc((*pq), func(m *ISISMessage) bool { return m.Transaction.Identifier == isis.Transaction.Identifier })
+	if itemIdx < 0 {
+		panic("ITEM NOT IN PQ")
+	}
+
+	item := (*pq)[itemIdx]
+	item.priority = priority
+	item.undeliverable = false // im hoping update is only called when a final priority is achieved, in which case it is now deliverable
+
+	heap.Fix(pq, itemIdx)
 }

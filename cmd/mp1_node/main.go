@@ -54,7 +54,7 @@ func run() error {
 	}
 
 	genTransactions := make(chan Transaction)
-	go StreamTransactions(os.Stdin, genTransactions)
+	go StreamTransactions(os.Stdin, genTransactions, currentNode)
 
 	genMessages := make(chan ReliableMessage)
 	go transactionsToMessages(currentNode, genTransactions, genMessages)
@@ -69,7 +69,7 @@ func run() error {
 	SetupCloseHandler(identifier)
 	for {
 		message := <-multicast.Receiver()
-		// fmt.Println("DELIVERED: ", message.Identifier)
+		// fmt.Println("DELIVERED to application: ", message)
 
 		transaction := message.Transaction
 
@@ -89,7 +89,7 @@ func run() error {
 		}
 
 		balanceString := balancesToString(balances)
-		fmt.Print(balanceString)
+		// fmt.Print(balanceString)
 		balancesStrings += balanceString
 	}
 }
@@ -97,10 +97,10 @@ func run() error {
 func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan ReliableMessage) {
 	for {
 		transaction := <-transactions
-		fmt.Println("picked up transaction", transaction)
+		// fmt.Println("picked up transaction", transaction)
 		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: ""}
 		// fmt.Println("ISIS SENDING ", node.Identifier)
-		fmt.Println("converted to message", message)
+		// fmt.Println("converted to message", message)
 		messages <- message
 	}
 }

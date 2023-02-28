@@ -29,13 +29,13 @@ else:
     rate = 1.0
 
 i = 0
-# while True:
-while i < 1:
+while True:
+    # while i < 5:
     if random.random() < DEP_PROB:
         account = random_account()
         amount = random.randrange(1, 101)
         print(f"DEPOSIT {account} {amount}")
-        i += 1
+        # i += 1
         balances[account] += amount
     else:
         illegal = random.random() < ILLEGAL_TRANSFER_PROB
@@ -55,7 +55,7 @@ while i < 1:
                 break
 
         print(f"TRANSFER {account} -> {dest} {amount}")
-        i += 1
+        # i += 1
         if not illegal:  # update local balances
             balances[account] -= amount
             balances[dest] += amount

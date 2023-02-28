@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type Transaction struct {
@@ -11,9 +12,12 @@ type Transaction struct {
 	Amount        int
 	SourceAccount string
 	DestAccount   string
+	Identifier    string
 }
 
-func StreamTransactions(file *os.File, transactions chan Transaction) error {
+var transactionNumber = 0
+
+func StreamTransactions(file *os.File, transactions chan Transaction, currentNode *MPNode) error {
 	reader := bufio.NewReader(file)
 	reader.Reset(os.Stdin)
 	for {
@@ -43,9 +47,12 @@ func StreamTransactions(file *os.File, transactions chan Transaction) error {
 			Deposit:       transactionType == "DEPOSIT",
 			Amount:        amount,
 			SourceAccount: sourceAccount,
-			DestAccount:   destAccount}
+			DestAccount:   destAccount,
+			Identifier:    currentNode.identifier + "," + strconv.Itoa(transactionNumber) + "_T",
+		}
 
 		fmt.Println("GEN: ", transaction)
 		transactions <- transaction
+		transactionNumber += 1
 	}
 }

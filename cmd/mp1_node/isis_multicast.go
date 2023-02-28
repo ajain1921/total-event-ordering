@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
+	"container/heap"
 	"encoding/gob"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -36,16 +36,16 @@ type Content struct {
 }
 
 type ISISMulticast struct {
-	reliableMulticast *ReliableMulticast
-	currentNode       *MPNode
-	otherNodes        []*MPNode
-	writer            chan ReliableMessage
-	receiver          chan ISISMessage
-	reliableReceiver  chan ReliableMessage
-	queue             PriorityQueue
-	priorities        map[string]ISISPriority
-	proposedCounts    map[string]int
-	highestPriority   ISISPriority
+	reliableMulticast  *ReliableMulticast
+	currentNode        *MPNode
+	otherNodes         []*MPNode
+	writer             chan ReliableMessage
+	receiver           chan ISISMessage
+	reliableReceiver   chan ReliableMessage
+	queue              PriorityQueue
+	priorities         map[string]ISISPriority
+	proposedCounts     map[string]int
+	highestPriorityNum int
 }
 
 func (multicast *ISISMulticast) Setup() error {
@@ -62,6 +62,7 @@ func (multicast *ISISMulticast) Setup() error {
 
 	multicast.reliableReceiver = multicast.reliableMulticast.receiver
 
+	heap.Init(&multicast.queue)
 	go multicast.addISISReceives()
 
 	return nil
@@ -74,44 +75,50 @@ func (multicast *ISISMulticast) Receiver() <-chan ISISMessage {
 func (multicast *ISISMulticast) addISISReceives() {
 
 	for {
-		fmt.Println("<-I-multicast.reliableReceiver")
+		// fmt.Println("<-I-multicast.reliableReceiver")
 
 		message := <-multicast.reliableReceiver
 
 		isis := ReliableToISIS(message)
+		// fmt.Println("reliable to isis: ", isis)
 
 		if !isis.proposal && !isis.agreed {
-			fmt.Println("not a proposal and not agreed (multicasted message)", isis)
-			multicast.highestPriority.Num++
+			// fmt.Println("not a proposal and not agreed (multicasted message)", isis)
+			multicast.highestPriorityNum = multicast.highestPriorityNum + 1
 			proposal := ISISMessage{
-				Node: multicast.currentNode.identifier,
-				// ToNode:      &isis.Node,
-				Transaction: isis.Transaction,
-				proposal:    true,
-				agreed:      false,
-				priority:    multicast.highestPriority,
-				Identifier:  isis.Identifier,
+				Node:          multicast.currentNode.identifier,
+				ToNode:        &isis.Node,
+				Transaction:   isis.Transaction,
+				proposal:      true,
+				agreed:        false,
+				priority:      ISISPriority{Num: multicast.highestPriorityNum, Identifier: multicast.currentNode.identifier},
+				Identifier:    isis.Identifier,
+				undeliverable: true,
 			}
 
-			fmt.Println("before send proposal to multicasted writer", proposal)
+			// fmt.Println("before send proposal to multicasted writer", proposal)
 			multicast.writer <- ISISToReliable(proposal)
-			fmt.Println("after send proposal to multicasted writer", proposal)
-			multicast.queue.Push(&isis)
+			// fmt.Println("after send proposal to multicasted writer", proposal)
+
+			// fmt.Println("before pushing ", isis, " to PQ", multicast.queue.Print())
+			// multicast.queue.Push(&isis)
+			heap.Push(&multicast.queue, &proposal)
+			// fmt.Println("after pushing ", isis, " to PQ", multicast.queue.Print())
 		} else if isis.proposal {
-			if _, contains := multicast.priorities[isis.Identifier]; !contains {
-				multicast.priorities[isis.Identifier] = isis.priority
-			} else if ComparePriorities(isis.priority, multicast.priorities[isis.Identifier]) {
-				multicast.priorities[isis.Identifier] = isis.priority
+			if _, contains := multicast.priorities[isis.Transaction.Identifier]; !contains {
+				multicast.priorities[isis.Transaction.Identifier] = isis.priority
+			} else if ComparePriorities(isis.priority, multicast.priorities[isis.Transaction.Identifier]) {
+				multicast.priorities[isis.Transaction.Identifier] = isis.priority
 			}
-			multicast.proposedCounts[isis.Identifier]++
-			fmt.Println("RECEIVED PROPOSAL: " + isis.Identifier + " (" + strconv.Itoa(multicast.proposedCounts[isis.Identifier]) + ")")
-			// fmt.Println("recieved proposal cnt: ", multicast.proposedCounts[isis.Identifier])
-			if multicast.proposedCounts[isis.Identifier] >= len(multicast.otherNodes)+1 {
-				fmt.Println("SENDING AGREE: " + isis.Identifier + " [" + strconv.Itoa(multicast.priorities[isis.Identifier].Num) + "," + multicast.priorities[isis.Identifier].Identifier + "]")
+			multicast.proposedCounts[isis.Transaction.Identifier]++
+			// fmt.Println("RECEIVED PROPOSAL: " + isis.Transaction.Identifier + " (" + strconv.Itoa(multicast.proposedCounts[isis.Transaction.Identifier]) + ")")
+			// fmt.Println("recieved proposal cnt: ", multicast.proposedCounts[isis.Transaction.identifier])
+			if multicast.proposedCounts[isis.Transaction.Identifier] >= len(multicast.otherNodes)+1 {
+				// fmt.Println("SENDING AGREE: " + isis.Transaction.Identifier + " [" + strconv.Itoa(multicast.priorities[isis.Transaction.Identifier].Num) + "," + multicast.priorities[isis.Transaction.Identifier].Identifier + "]")
 				agreed := ISISMessage{
 					Node:          multicast.currentNode.identifier,
 					Transaction:   isis.Transaction,
-					priority:      multicast.priorities[isis.Identifier],
+					priority:      multicast.priorities[isis.Transaction.Identifier],
 					agreed:        true,
 					proposal:      false,
 					undeliverable: false, //not useuful
@@ -120,16 +127,24 @@ func (multicast *ISISMulticast) addISISReceives() {
 				multicast.writer <- ISISToReliable(agreed)
 			}
 		} else if isis.agreed {
-			fmt.Println("aggred")
-			if ComparePriorities(isis.priority, multicast.highestPriority) {
-				multicast.highestPriority = isis.priority
+			fmt.Println("agreed on", isis)
+			if isis.priority.Num > multicast.highestPriorityNum {
+				multicast.highestPriorityNum = isis.priority.Num
 			}
+
+			// fmt.Println("before update", isis, multicast.queue.Print())
 			multicast.queue.update(&isis, isis.priority)
-			isis.undeliverable = false
+			fmt.Println("after update", isis, multicast.queue.Print())
+
 			// deliver all deliverable at front of queue
-			for multicast.queue.Peek() != nil && !multicast.queue.Peek().(*ISISMessage).undeliverable {
-				message := multicast.queue.Pop().(*ISISMessage)
-				multicast.receiver <- *message
+			for len(multicast.queue) > 0 {
+				message := heap.Pop(&multicast.queue).(*ISISMessage)
+				if !message.undeliverable {
+					multicast.receiver <- *message
+				} else {
+					heap.Push(&multicast.queue, message)
+					break
+				}
 			}
 		}
 	}
@@ -148,12 +163,13 @@ func ReliableToISIS(message ReliableMessage) ISISMessage {
 	// fmt.Println("recieved cotentn: ", message.Content)
 	if err != nil {
 		return ISISMessage{
-			proposal:    false,
-			agreed:      false,
-			Node:        message.Node,
-			Identifier:  message.Identifier,
-			Transaction: message.Transaction,
-			ToNode:      message.ToNode,
+			proposal:      false,
+			agreed:        false,
+			Node:          message.Node,
+			Identifier:    message.Identifier,
+			Transaction:   message.Transaction,
+			ToNode:        message.ToNode,
+			undeliverable: true,
 		}
 	}
 
@@ -163,9 +179,9 @@ func ReliableToISIS(message ReliableMessage) ISISMessage {
 		proposal:      content.Proposal,
 		agreed:        content.Agreed,
 		priority:      content.Priority,
-		undeliverable: false, //unimportant
+		undeliverable: true, //important bc all messages added to queue should initially be undeliverable
 		Node:          message.Node,
-		Identifier:    content.Identifier,
+		Identifier:    message.Identifier,
 		Transaction:   message.Transaction,
 		ToNode:        message.ToNode,
 	}
