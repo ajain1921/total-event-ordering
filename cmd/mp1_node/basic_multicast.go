@@ -107,7 +107,7 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 	connectionMessage := BasicMessage{Node: multicast.currentNode.identifier, Content: "connected"}
 	err = encoder.Encode(connectionMessage)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("OOF: ", err)
 		return
 	}
 	fmt.Println("SEND ", connectionMessage)
@@ -132,7 +132,7 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 		}
 		err = encoder.Encode(&message)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("OF: ", err)
 			return
 		}
 		// fmt.Println("SEND ", message)
@@ -147,7 +147,7 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 	message := &BasicMessage{}
 	err := dec.Decode(message)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("OOOOF: ", err)
 		return
 	}
 	fmt.Println("RECV ", *message)
@@ -171,7 +171,7 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 		message := &BasicMessage{}
 		err = dec.Decode(message)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("UFF: ", err, " ", node.identifier)
 			return
 		}
 
