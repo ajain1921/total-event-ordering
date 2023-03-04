@@ -5,3 +5,5 @@ data\ copy.csv
 *_log.txt
 *_log.csv
 venv/
+logs/
+.DS_Store
