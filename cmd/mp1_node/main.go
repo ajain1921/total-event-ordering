@@ -82,7 +82,7 @@ func run() error {
 	for {
 		message := <-multicast.Receiver()
 		transactionsLog <- message.Transaction.Identifier
-		fmt.Println("DELIVERED to application: ", message)
+		// fmt.Println("DELIVERED to application: ", message)
 
 		transaction := message.Transaction
 
@@ -117,7 +117,7 @@ func logTransactions(transactionsLog chan string) {
 func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan ReliableMessage) {
 	for {
 		transaction := <-transactions
-		fmt.Println("picked up transaction", transaction)
+		// fmt.Println("picked up transaction", transaction)
 		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: ""}
 		// fmt.Println("ISIS SENDING ", node.Identifier)
 		// fmt.Println("converted to message", message)

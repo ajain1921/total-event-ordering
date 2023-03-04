@@ -51,7 +51,7 @@ func StreamTransactions(file *os.File, transactions chan Transaction, currentNod
 			Identifier:    currentNode.identifier + "_" + strconv.Itoa(transactionNumber) + "_T",
 		}
 
-		fmt.Println("GEN: ", transaction)
+		// fmt.Println("GEN: ", transaction)
 		transactionsLog <- transaction.Identifier
 		transactions <- transaction
 		transactionNumber += 1

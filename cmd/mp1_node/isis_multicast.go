@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"container/heap"
 	"encoding/gob"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -110,7 +109,7 @@ func (multicast *ISISMulticast) addISISReceives() {
 				lifeTime:      time.Now().Unix(),
 			}
 
-			fmt.Println("before send proposal to multicasted writer", proposal)
+			// fmt.Println("before send proposal to multicasted writer", proposal)
 			multicast.writer <- ISISToReliable(proposal)
 			// fmt.Println("after send proposal to multicasted writer", proposal)
 
@@ -134,15 +133,15 @@ func (multicast *ISISMulticast) addISISReceives() {
 			// fmt.Println("recieved proposal cnt: ", multicast.proposedCounts[isis.Transaction.identifier])
 			// if all nodes that havent failed, have sent a proposal
 
-			fmt.Println("proposals: ", multicast.proposals[isis.Transaction.Identifier])
+			// fmt.Println("proposals: ", multicast.proposals[isis.Transaction.Identifier])
 			receivedAllProposals := true
 			for _, node := range multicast.allNodes {
 
-				fmt.Println("Failed nodes: ", multicast.reliableMulticast.basicMulticast.failedNodes)
+				// fmt.Println("Failed nodes: ", multicast.reliableMulticast.basicMulticast.failedNodes)
 				multicast.reliableMulticast.basicMulticast.failedNodesLock.Lock()
 				if _, contains := multicast.reliableMulticast.basicMulticast.failedNodes[node.identifier]; contains {
 					multicast.reliableMulticast.basicMulticast.failedNodesLock.Unlock()
-					fmt.Println("Failed node being skipped: ", node.identifier)
+					// fmt.Println("Failed node being skipped: ", node.identifier)
 					continue
 				}
 				multicast.reliableMulticast.basicMulticast.failedNodesLock.Unlock()
@@ -167,14 +166,14 @@ func (multicast *ISISMulticast) addISISReceives() {
 				multicast.writer <- ISISToReliable(agreed)
 			}
 		} else if isis.agreed {
-			fmt.Println("agreed on", isis)
+			// fmt.Println("agreed on", isis)
 			if isis.priority.Num > multicast.highestPriorityNum {
 				multicast.highestPriorityNum = isis.priority.Num
 			}
 
 			// fmt.Println("before update", isis, multicast.queue.Print())
 			multicast.queue.update(&isis, isis.priority)
-			fmt.Println("after update", isis, multicast.queue.Print())
+			// fmt.Println("after update", isis, multicast.queue.Print())
 
 			// deliver all deliverable at front of queue
 			for len(multicast.queue) > 0 {

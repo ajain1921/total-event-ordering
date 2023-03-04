@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/gob"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -104,7 +103,7 @@ func (multicast *BasicMulticast) forward() {
 func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage) {
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
-		fmt.Println("trying to connect to " + node.identifier + " but failed")
+		// fmt.Println("trying to connect to " + node.identifier + " but failed")
 		return
 	}
 	defer conn.Close()
@@ -114,19 +113,19 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 	connectionMessage := BasicMessage{Node: multicast.currentNode.identifier, Content: "connected"}
 	err = encoder.Encode(connectionMessage)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 		return
 	}
-	fmt.Println("SEND ", connectionMessage)
+	// fmt.Println("SEND ", connectionMessage)
 
 	multicast.connections[node.identifier].outbound = true
 
-	fmt.Println("Connection message sent, waiting for ready")
+	// fmt.Println("Connection message sent, waiting for ready")
 
 	for !multicast.ready() {
 	}
 
-	fmt.Println("Ready, sleeping")
+	// fmt.Println("Ready, sleeping")
 
 	time.Sleep(time.Duration(5) * time.Second)
 
@@ -138,7 +137,7 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 		}
 		err = encoder.Encode(&message)
 		if err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
 			break
 		}
 		// fmt.Println("SEND ", message)
@@ -154,17 +153,17 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 }
 
 func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
-	fmt.Println("connection hander...")
+	// fmt.Println("connection hander...")
 
 	dec := gob.NewDecoder(conn)
 
 	message := &BasicMessage{}
 	err := dec.Decode(message)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 		return
 	}
-	fmt.Println("RECV ", *message)
+	// fmt.Println("RECV ", *message)
 	var node *MPNode
 
 	for _, otherNode := range multicast.allNodes {
@@ -185,7 +184,7 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 		message := &BasicMessage{}
 		err = dec.Decode(message)
 		if err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
 			return
 		}
 
