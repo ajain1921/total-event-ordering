@@ -3,4 +3,5 @@ data.csv
 data\ copy.csv
 *.png
 *_log.txt
+*_log.csv
 venv/

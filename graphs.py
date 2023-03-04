@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 NUM_FILES = 3
 
-DATA_FILE_NAME = 'node1_transactions.csv'
+DATA_FILE_NAME = 'node1_transactions_log.csv'
 
 df = pd.read_csv(DATA_FILE_NAME)
 
