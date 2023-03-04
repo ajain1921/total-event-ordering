@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -26,19 +27,22 @@ type BasicMessage struct {
 }
 
 type BasicMulticast struct {
-	currentNode *MPNode
-	otherNodes  []*MPNode
-	allNodes    []*MPNode
-	connections map[string]*ConnectionStatus
-	writer      chan BasicMessage
-	receiver    chan BasicMessage
-	channels    map[string]chan BasicMessage
+	currentNode     *MPNode
+	otherNodes      []*MPNode
+	allNodes        []*MPNode
+	connections     map[string]*ConnectionStatus
+	writer          chan BasicMessage
+	receiver        chan BasicMessage
+	channels        map[string]chan BasicMessage
+	failedNodes     map[string]interface{}
+	failedNodesLock sync.Mutex
 }
 
 func (multicast *BasicMulticast) Setup() error {
 	multicast.receiver = make(chan BasicMessage)
 	multicast.connections = make(map[string]*ConnectionStatus)
 	multicast.channels = make(map[string]chan BasicMessage)
+	multicast.failedNodes = make(map[string]interface{})
 
 	ln, err := net.Listen("tcp", multicast.currentNode.hostname+":"+multicast.currentNode.port)
 	if err != nil {
@@ -91,6 +95,7 @@ func (multicast *BasicMulticast) forward() {
 	for {
 		message := <-multicast.writer
 		for _, channel := range multicast.channels {
+
 			channel <- message
 		}
 	}
@@ -134,9 +139,17 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 		err = encoder.Encode(&message)
 		if err != nil {
 			fmt.Println(err)
-			return
+			break
 		}
 		// fmt.Println("SEND ", message)
+	}
+
+	multicast.failedNodesLock.Lock()
+	multicast.failedNodes[node.identifier] = struct{}{}
+	multicast.failedNodesLock.Unlock()
+
+	for {
+		<-channel
 	}
 }
 

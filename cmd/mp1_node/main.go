@@ -19,7 +19,7 @@ func main() {
 }
 
 var balancesStrings = ""
-var transactionsCSVData = "transaction_id, time\n"
+var transactionsCSVData = "transaction_id,time\n"
 
 func SetupCloseHandler(identifier string) {
 	c := make(chan os.Signal)
@@ -31,15 +31,15 @@ func SetupCloseHandler(identifier string) {
 			return
 		}
 
-		transactionsLogFile, err := os.Create(identifier + "_transactions_log.csv")
+		/* transactionsLogFile, err := os.Create(identifier + "_transactions_log.csv")
 		if err != nil {
 			return
-		}
+		} */
 
 		defer balancesFile.Close()
-		defer transactionsLogFile.Close()
+		// defer transactionsLogFile.Close()
 
-		transactionsLogFile.WriteString(transactionsCSVData)
+		// transactionsLogFile.WriteString(transactionsCSVData)
 		balancesFile.WriteString(balancesStrings)
 		os.Exit(0)
 	}()
@@ -82,7 +82,7 @@ func run() error {
 	for {
 		message := <-multicast.Receiver()
 		transactionsLog <- message.Transaction.Identifier
-		// fmt.Println("DELIVERED to application: ", message)
+		fmt.Println("DELIVERED to application: ", message)
 
 		transaction := message.Transaction
 
