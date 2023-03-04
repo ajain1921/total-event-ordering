@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -18,20 +19,28 @@ func main() {
 }
 
 var balancesStrings = ""
+var transactionsCSVData = "transaction_id, time\n"
 
 func SetupCloseHandler(identifier string) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		f, err := os.Create(identifier + "_log.txt")
+		balancesFile, err := os.Create(identifier + "_log.txt")
 		if err != nil {
 			return
 		}
 
-		defer f.Close()
+		transactionsLogFile, err := os.Create(identifier + "_transactions_log.csv")
+		if err != nil {
+			return
+		}
 
-		f.WriteString(balancesStrings)
+		defer balancesFile.Close()
+		defer transactionsLogFile.Close()
+
+		transactionsLogFile.WriteString(transactionsCSVData)
+		balancesFile.WriteString(balancesStrings)
 		os.Exit(0)
 	}()
 }
@@ -53,8 +62,11 @@ func run() error {
 		return err
 	}
 
+	transactionsLog := make(chan string)
+	go logTransactions(transactionsLog)
+
 	genTransactions := make(chan Transaction)
-	go StreamTransactions(os.Stdin, genTransactions, currentNode)
+	go StreamTransactions(os.Stdin, genTransactions, currentNode, transactionsLog)
 
 	genMessages := make(chan ReliableMessage)
 	go transactionsToMessages(currentNode, genTransactions, genMessages)
@@ -69,6 +81,7 @@ func run() error {
 	SetupCloseHandler(identifier)
 	for {
 		message := <-multicast.Receiver()
+		transactionsLog <- message.Transaction.Identifier
 		// fmt.Println("DELIVERED to application: ", message)
 
 		transaction := message.Transaction
@@ -94,10 +107,17 @@ func run() error {
 	}
 }
 
+func logTransactions(transactionsLog chan string) {
+	for {
+		transactionId := <-transactionsLog
+		transactionsCSVData += transactionId + "," + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"
+	}
+}
+
 func transactionsToMessages(node *MPNode, transactions chan Transaction, messages chan ReliableMessage) {
 	for {
 		transaction := <-transactions
-		// fmt.Println("picked up transaction", transaction)
+		fmt.Println("picked up transaction", transaction)
 		message := ReliableMessage{Node: node.identifier, Transaction: transaction, Identifier: ""}
 		// fmt.Println("ISIS SENDING ", node.Identifier)
 		// fmt.Println("converted to message", message)

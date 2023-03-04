@@ -17,7 +17,7 @@ type Transaction struct {
 
 var transactionNumber = 0
 
-func StreamTransactions(file *os.File, transactions chan Transaction, currentNode *MPNode) error {
+func StreamTransactions(file *os.File, transactions chan Transaction, currentNode *MPNode, transactionsLog chan string) error {
 	reader := bufio.NewReader(file)
 	reader.Reset(os.Stdin)
 	for {
@@ -48,10 +48,11 @@ func StreamTransactions(file *os.File, transactions chan Transaction, currentNod
 			Amount:        amount,
 			SourceAccount: sourceAccount,
 			DestAccount:   destAccount,
-			Identifier:    currentNode.identifier + "," + strconv.Itoa(transactionNumber) + "_T",
+			Identifier:    currentNode.identifier + "_" + strconv.Itoa(transactionNumber) + "_T",
 		}
 
 		fmt.Println("GEN: ", transaction)
+		transactionsLog <- transaction.Identifier
 		transactions <- transaction
 		transactionNumber += 1
 	}
