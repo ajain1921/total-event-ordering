@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-NUM_FILES = 3
+NUM_FILES = 8
 
 DATA_FILE_NAME = "logs/node{}_transactions_log.csv"
 

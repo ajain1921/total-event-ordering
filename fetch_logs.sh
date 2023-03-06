@@ -12,7 +12,7 @@
 
 
 rm -rf logs && mkdir logs
-for i in {1..3}
+for i in {1..8}
 do
 	echo "Copying code from $i server"
 	sshpass -p $UIUC_PASSWORD scp -o StrictHostKeyChecking=no -r "$netid@sp23-cs425-220$i.cs.illinois.edu:/home/$netid/mp1/node${i}_*" ./logs/
