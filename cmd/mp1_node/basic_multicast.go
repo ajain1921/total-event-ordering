@@ -89,6 +89,7 @@ func (multicast *BasicMulticast) ready() bool {
 	for _, node := range multicast.allNodes {
 		connectionStatus := multicast.connections[node.identifier]
 		if !connectionStatus.inbound || !connectionStatus.outbound {
+			multicast.connectionsLock.Unlock()
 			return false
 		}
 	}
@@ -123,6 +124,7 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 	multicast.connectionsLock.Lock()
 
 	if multicast.connections[node.identifier].outbound {
+		multicast.connectionsLock.Unlock()
 		return
 	}
 	multicast.connections[node.identifier].outbound = true
