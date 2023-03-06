@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -21,6 +22,8 @@ func main() {
 var balancesStrings = ""
 var transactionsCSVData = "transaction_id,time\n"
 
+var wg sync.WaitGroup = sync.WaitGroup{}
+
 func SetupCloseHandler(identifier string) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -31,15 +34,15 @@ func SetupCloseHandler(identifier string) {
 			return
 		}
 
-		/* transactionsLogFile, err := os.Create(identifier + "_transactions_log.csv")
+		transactionsLogFile, err := os.Create(identifier + "_transactions_log.csv")
 		if err != nil {
 			return
-		} */
+		}
 
 		defer balancesFile.Close()
-		// defer transactionsLogFile.Close()
+		defer transactionsLogFile.Close()
 
-		// transactionsLogFile.WriteString(transactionsCSVData)
+		transactionsLogFile.WriteString(transactionsCSVData)
 		balancesFile.WriteString(balancesStrings)
 		os.Exit(0)
 	}()
@@ -62,6 +65,8 @@ func run() error {
 		return err
 	}
 
+	wg.Add(len(otherNodes) + 1)
+
 	transactionsLog := make(chan string)
 	go logTransactions(transactionsLog)
 
@@ -82,7 +87,7 @@ func run() error {
 	for {
 		message := <-multicast.Receiver()
 		transactionsLog <- message.Transaction.Identifier
-		// fmt.Println("DELIVERED to application: ", message)
+		fmt.Println("DELIVERED to application: ", message.Transaction)
 
 		transaction := message.Transaction
 

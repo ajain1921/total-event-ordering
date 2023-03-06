@@ -129,6 +129,8 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 
 	time.Sleep(time.Duration(5) * time.Second)
 
+	wg.Done()
+
 	for {
 		message := <-channel
 		// If we're unicasting and this isn't the destination... STOP

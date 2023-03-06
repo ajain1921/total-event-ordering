@@ -18,6 +18,8 @@ type Transaction struct {
 var transactionNumber = 0
 
 func StreamTransactions(file *os.File, transactions chan Transaction, currentNode *MPNode, transactionsLog chan string) error {
+	wg.Wait()
+
 	reader := bufio.NewReader(file)
 	reader.Reset(os.Stdin)
 	for {
@@ -26,7 +28,7 @@ func StreamTransactions(file *os.File, transactions chan Transaction, currentNod
 			return err
 		}
 
-		fmt.Print("GEN: ", line)
+		// fmt.Print("GEN: ", line)
 		var transactionType string
 		var sourceAccount string
 		var destAccount string
