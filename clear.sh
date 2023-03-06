@@ -12,9 +12,9 @@
 
 
 
-for i in {1..3}
+for i in {1..8}
 do
 	echo "Running node$i"
-	sshpass -p $UIUC_PASSWORD ssh -o StrictHostKeyChecking=no "$netid@sp23-cs425-220$i.cs.illinois.edu" "pkill mp1_node && rm -rf mp1"
+	sshpass -p $UIUC_PASSWORD ssh -o StrictHostKeyChecking=no "$netid@sp23-cs425-220$i.cs.illinois.edu" "pkill mp1_node"
 done
 

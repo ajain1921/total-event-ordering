@@ -1,9 +1,9 @@
 8
-node1 127.0.0.1 1234
-node2 127.0.0.1 1235
-node3 127.0.0.1 1236
-node4 127.0.0.1 1237
-node5 127.0.0.1 1238
-node6 127.0.0.1 1239
-node7 127.0.0.1 1240
-node8 127.0.0.1 1241
+node1 sp23-cs425-2201.cs.illinois.edu 1234
+node2 sp23-cs425-2202.cs.illinois.edu 1234
+node3 sp23-cs425-2203.cs.illinois.edu 1234
+node4 sp23-cs425-2204.cs.illinois.edu 1234
+node5 sp23-cs425-2205.cs.illinois.edu 1234
+node6 sp23-cs425-2206.cs.illinois.edu 1234
+node7 sp23-cs425-2207.cs.illinois.edu 1234
+node8 sp23-cs425-2208.cs.illinois.edu 1234
