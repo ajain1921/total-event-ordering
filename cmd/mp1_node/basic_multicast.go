@@ -35,6 +35,7 @@ type BasicMulticast struct {
 	channels        map[string]chan BasicMessage
 	failedNodes     map[string]interface{}
 	failedNodesLock sync.Mutex
+	connectionsLock sync.Mutex
 }
 
 func (multicast *BasicMulticast) Setup() error {
@@ -59,6 +60,9 @@ func (multicast *BasicMulticast) Setup() error {
 	for _, node := range allNodes {
 		multicast.channels[node.identifier] = make(chan BasicMessage)
 		multicast.connections[node.identifier] = &ConnectionStatus{}
+	}
+
+	for _, node := range allNodes {
 		go multicast.connect(node, multicast.channels[node.identifier])
 	}
 
@@ -81,12 +85,14 @@ func (multicast *BasicMulticast) Receiver() <-chan BasicMessage {
 }
 
 func (multicast *BasicMulticast) ready() bool {
+	multicast.connectionsLock.Lock()
 	for _, node := range multicast.allNodes {
 		connectionStatus := multicast.connections[node.identifier]
 		if !connectionStatus.inbound || !connectionStatus.outbound {
 			return false
 		}
 	}
+	multicast.connectionsLock.Unlock()
 	return true
 }
 
@@ -101,12 +107,27 @@ func (multicast *BasicMulticast) forward() {
 }
 
 func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage) {
+	// connection := multicast.connections[node.identifier]
+
+	// if connection.outbound {
+	// 	return
+	// }
+
 	conn, err := net.Dial("tcp", node.hostname+":"+node.port)
 	if err != nil {
 		// fmt.Println("trying to connect to " + node.identifier + " but failed")
 		return
 	}
 	defer conn.Close()
+
+	multicast.connectionsLock.Lock()
+
+	if multicast.connections[node.identifier].outbound {
+		return
+	}
+	multicast.connections[node.identifier].outbound = true
+
+	multicast.connectionsLock.Unlock()
 
 	encoder := gob.NewEncoder(conn)
 
@@ -117,8 +138,6 @@ func (multicast *BasicMulticast) connect(node *MPNode, channel chan BasicMessage
 		return
 	}
 	// fmt.Println("SEND ", connectionMessage)
-
-	multicast.connections[node.identifier].outbound = true
 
 	// fmt.Println("Connection message sent, waiting for ready")
 
@@ -175,11 +194,15 @@ func (multicast *BasicMulticast) handleConnection(conn net.Conn) {
 		}
 	}
 
+	multicast.connectionsLock.Lock()
 	connection := multicast.connections[node.identifier]
 	connection.inbound = true
 
 	if !connection.outbound {
+		multicast.connectionsLock.Unlock()
 		go multicast.connect(node, multicast.channels[node.identifier])
+	} else {
+		multicast.connectionsLock.Unlock()
 	}
 
 	for {

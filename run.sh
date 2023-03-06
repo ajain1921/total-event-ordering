@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in {1..3}
+for i in {1..8}
 do
 	echo "Copying code to $i server"
 	sshpass -p $UIUC_PASSWORD ssh -o StrictHostKeyChecking=no "$netid@sp23-cs425-220$i.cs.illinois.edu" "rm -rf mp1 && mkdir mp1"
@@ -10,8 +10,8 @@ do
 done
 
 
-for i in {1..3}
+for i in {1..8}
 do
 	echo "Running node$i"
-	sshpass -p $UIUC_PASSWORD ssh -o StrictHostKeyChecking=no -n -f "$netid@sp23-cs425-220$i.cs.illinois.edu" "cd mp1 && make && nohup python3 -u gentx.py 0.5 | ./bin/mp1_node node$i 3_config_prod.txt"&
+	sshpass -p $UIUC_PASSWORD ssh -o StrictHostKeyChecking=no -n -f "$netid@sp23-cs425-220$i.cs.illinois.edu" "cd mp1 && make && nohup python3 -u gentx.py 5 | ./bin/mp1_node node$i 8_config_prod.txt"&
 done

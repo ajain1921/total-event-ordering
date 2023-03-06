@@ -7,7 +7,7 @@ import numpy as np
 
 NUM_FILES = 3
 
-DATA_FILE_NAME = "node{}_transactions_log.csv"
+DATA_FILE_NAME = "logs/node{}_transactions_log.csv"
 
 
 allDfs = []
@@ -34,7 +34,9 @@ x = np.sort(times_arr)
 y = 100 * np.arange(1, len(x) + 1) / len(x)
 
 print(x, y)
-plt.plot(x, y, marker=".", linestyle="none")
+# plt.plot(x, y,  marker=".", linestyle="none")
+plt.plot(x, y)
+
 plt.xlabel('Transaction Processing Time (ms)')
 plt.ylabel('Percentile (%)')
 plt.show()
