@@ -83,11 +83,11 @@ func run() error {
 	}
 
 	balances := make(map[string]int)
-	SetupCloseHandler(identifier)
+	// SetupCloseHandler(identifier)
 	for {
 		message := <-multicast.Receiver()
 		transactionsLog <- message.Transaction.Identifier
-		fmt.Println("DELIVERED to application: ", message.Transaction)
+		// fmt.Println("DELIVERED to application: ", message.Transaction)
 
 		transaction := message.Transaction
 
@@ -107,8 +107,8 @@ func run() error {
 		}
 
 		balanceString := balancesToString(balances)
-		// fmt.Print(balanceString)
-		balancesStrings += balanceString
+		fmt.Print(balanceString)
+		// balancesStrings += balanceString
 	}
 }
 
