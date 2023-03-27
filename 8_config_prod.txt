@@ -1,9 +1,0 @@
-8
-node1 sp23-cs425-2201.cs.illinois.edu 1234
-node2 sp23-cs425-2202.cs.illinois.edu 1234
-node3 sp23-cs425-2203.cs.illinois.edu 1234
-node4 sp23-cs425-2204.cs.illinois.edu 1234
-node5 sp23-cs425-2205.cs.illinois.edu 1234
-node6 sp23-cs425-2206.cs.illinois.edu 1234
-node7 sp23-cs425-2207.cs.illinois.edu 1234
-node8 sp23-cs425-2208.cs.illinois.edu 1234
